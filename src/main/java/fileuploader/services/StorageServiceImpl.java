@@ -15,7 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -42,8 +41,8 @@ public class StorageServiceImpl implements StorageService {
     private static final String COULD_NOT_PROCESS_FILE_ERROR = "Could not process given file: userId %s, filename %s. Exception: %s";
     private static final String ERROR_UPLOADED_FILE_NOT_FOUND_MSG = "Resource not found for id: %s";
 
-    @Value("${upload.tmp.dir}")
-    private String tmpLocation;
+    @Value("${upload.tmp.directory}")
+    private String tmpDirectory;
 
     @Autowired
     private UploadedFileRepository repository;
@@ -95,58 +94,50 @@ public class StorageServiceImpl implements StorageService {
     public void store(String userId, MultipartFile file, Integer totalChunks, boolean lastChunk, Instant uploadedTime) {
         String filename = StringUtils.cleanPath(file.getOriginalFilename());
 
-        Path tmpLocation = getTmpLocation(userId, filename);
+        Path tempFile = getTempFile(userId, filename);
         UploadedFile uploadedFile = repository.findByUserIdAndFilename(userId, filename);
         try {
-            Files.write(tmpLocation, file.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            Files.write(tempFile, file.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 
             if (lastChunk) {
-                saveOrUpdateCompletedUploadedFile(userId, totalChunks, uploadedTime, filename, uploadedFile, tmpLocation);
-                deleteTmpFileIfExists(tmpLocation);
+                saveOrUpdateCompletedUploadedFile(userId, totalChunks, uploadedTime, filename, uploadedFile, tempFile);
+                deleteTmpFileIfExists(tempFile);
             } else {
-                if (uploadedFile == null) {
-                    uploadedFile = UploadedFile.builder()
-                            .userId(userId)
-                            .filename(filename)
-                            .createdAt(uploadedTime)
-                            .status(PENDING)
-                            .build();
-
-                    repository.save(uploadedFile);
-                }
+                savePendingUploadedFile(userId, uploadedTime, filename, uploadedFile);
             }
         } catch (Exception e) {
             String err = format(COULD_NOT_PROCESS_FILE_ERROR, userId, filename, e.getMessage());
             log.error("[StorageServiceImpl.store] " + err);
 
-            saveOrUpdateFailedUploadedFile(userId, totalChunks, uploadedTime, filename, uploadedFile, e.getMessage());
-            deleteTmpFileIfExists(tmpLocation);
+            saveOrUpdateFailedUploadedFile(userId, totalChunks, uploadedTime, filename, uploadedFile, err);
+            deleteTmpFileIfExists(tempFile);
 
             throw new StorageException(err);
         }
     }
 
-    private Path getTmpLocation(String userId, String filename) {
-        Path path = Paths.get(tmpLocation);
-        if (!Files.exists(path)) {
+    private Path getTempFile(String userId, String filename) {
+        String home = System.getProperty("user.home");
+
+        Path path = Paths.get(home, tmpDirectory);
+        if (!path.toFile().exists()) {
             try {
                 Files.createDirectories(path);
-                return Paths.get(tmpLocation + FileSystems.getDefault().getSeparator() + userId + "_" + filename);
             } catch (IOException e) {
-                String err = format(COULD_NOT_CREATE_TMP_DIR_ERROR, tmpLocation, e.getMessage());
+                String err = format(COULD_NOT_CREATE_TMP_DIR_ERROR, tmpDirectory, e.getMessage());
                 log.error("[StorageServiceImpl.getTmpLocation] " + err);
                 throw new StorageException(err);
             }
         }
 
-        return Paths.get(tmpLocation + FileSystems.getDefault().getSeparator() + userId + "_" + filename);
+        return Paths.get(home, tmpDirectory, userId + "_" + filename);
     }
 
     private void saveOrUpdateCompletedUploadedFile(String userId, Integer totalChunks, Instant uploadedTime,
                                                    String filename, UploadedFile uploadedFile, Path tmpLocation)
             throws IOException {
         if (uploadedFile == null) {
-            uploadedFile = UploadedFile.builder()
+            UploadedFile file = UploadedFile.builder()
                     .userId(userId)
                     .filename(filename)
                     .createdAt(uploadedTime)
@@ -156,19 +147,34 @@ public class StorageServiceImpl implements StorageService {
                     .content(readAllBytes(tmpLocation))
                     .build();
 
+            repository.save(file);
         } else {
             uploadedFile.setLastModifiedAt(uploadedTime);
             uploadedFile.setStatus(COMPLETED);
             uploadedFile.setChunks(totalChunks);
             uploadedFile.setContent(readAllBytes(tmpLocation));
+
+            repository.save(uploadedFile);
         }
-        repository.save(uploadedFile);
+    }
+
+    private void savePendingUploadedFile(String userId, Instant uploadedTime, String filename, UploadedFile uploadedFile) {
+        if (uploadedFile == null) {
+            UploadedFile file = UploadedFile.builder()
+                    .userId(userId)
+                    .filename(filename)
+                    .createdAt(uploadedTime)
+                    .status(PENDING)
+                    .build();
+
+            repository.save(file);
+        }
     }
 
     private void saveOrUpdateFailedUploadedFile(String userId, Integer totalChunks, Instant uploadedTime,
                                                 String filename, UploadedFile uploadedFile, String rootCause) {
         if (uploadedFile == null) {
-            uploadedFile = UploadedFile.builder()
+            UploadedFile file = UploadedFile.builder()
                     .userId(userId)
                     .filename(filename)
                     .createdAt(uploadedTime)
@@ -178,13 +184,15 @@ public class StorageServiceImpl implements StorageService {
                     .rootCause(rootCause)
                     .build();
 
+            repository.save(file);
         } else {
             uploadedFile.setLastModifiedAt(uploadedTime);
             uploadedFile.setStatus(FAILED);
             uploadedFile.setChunks(totalChunks);
             uploadedFile.setRootCause(rootCause);
+
+            repository.save(uploadedFile);
         }
-        repository.save(uploadedFile);
     }
 
     private void deleteTmpFileIfExists(Path tmpLocation) {
