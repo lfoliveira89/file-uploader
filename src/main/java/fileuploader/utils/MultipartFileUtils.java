@@ -21,7 +21,7 @@ public abstract class MultipartFileUtils {
 
     public static void validate(MultipartFile multipartFile) {
         if (multipartFile == null) {
-            throw new IllegalArgumentException("multipartFile is required");
+            throw new StorageException("multipartFile is required");
         }
 
         if (multipartFile.isEmpty()) {
@@ -33,18 +33,6 @@ public abstract class MultipartFileUtils {
         String filename = StringUtils.cleanPath(multipartFile.getOriginalFilename());
         if (filename.contains("..")) {
             String err = String.format(SECURITY_CHECK_MSG, filename);
-            log.error(PREFIX + err);
-            throw new StorageException(err);
-        }
-    }
-
-    public static void isEmpty(MultipartFile multipartFile) {
-        if (multipartFile == null) {
-            throw new IllegalArgumentException("multipartFile is required");
-        }
-
-        if (multipartFile.isEmpty()) {
-            String err = EMPTY_MULTIPART_FILE_MSG;
             log.error(PREFIX + err);
             throw new StorageException(err);
         }

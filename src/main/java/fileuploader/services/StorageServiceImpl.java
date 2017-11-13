@@ -5,7 +5,6 @@ import fileuploader.domain.UploadedFile;
 import fileuploader.exceptions.ResourceNotFoundException;
 import fileuploader.exceptions.StorageException;
 import fileuploader.repositories.UploadedFileRepository;
-import fileuploader.utils.MultipartFileUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -94,8 +93,6 @@ public class StorageServiceImpl implements StorageService {
     @Transactional
     @Override
     public void store(String userId, MultipartFile file, Integer totalChunks, boolean lastChunk, Instant uploadedTime) {
-        MultipartFileUtils.isEmpty(file);
-
         String filename = StringUtils.cleanPath(file.getOriginalFilename());
 
         Path tmpLocation = getTmpLocation(userId, filename);

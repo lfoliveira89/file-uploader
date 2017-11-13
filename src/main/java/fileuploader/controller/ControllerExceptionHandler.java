@@ -1,5 +1,7 @@
 package fileuploader.controller;
 
+import fileuploader.exceptions.UnprocessableEntityException;
+import fileuploader.exceptions.ResourceNotFoundException;
 import fileuploader.exceptions.StorageException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -21,6 +23,16 @@ public class ControllerExceptionHandler {
     @ExceptionHandler(StorageException.class)
     public ResponseEntity handleStorageException(StorageException ex) {
         return ResponseEntity.unprocessableEntity().body(ex.getMessage());
+    }
+
+    @ExceptionHandler(UnprocessableEntityException.class)
+    public ResponseEntity handleUnprocessableEntityException(UnprocessableEntityException ex) {
+        return ResponseEntity.unprocessableEntity().body(ex.getMessage());
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity handleResourceNotFoundException(ResourceNotFoundException ex) {
+        return ResponseEntity.notFound().build();
     }
 
 }

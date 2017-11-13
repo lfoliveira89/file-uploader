@@ -1,10 +1,11 @@
 package fileuploader.controller;
 
 import fileuploader.controller.resources.UploadedFileResource;
-import fileuploader.exceptions.StorageException;
+import fileuploader.exceptions.UnprocessableEntityException;
 import fileuploader.services.StorageService;
 import fileuploader.utils.MultipartFileUtils;
 import io.swagger.annotations.Api;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,10 +40,14 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 /**
  * Created by luisoliveira on 11/11/17.
  */
+@Slf4j
 @RestController
 @RequestMapping(FILE_UPLOAD_URL_SERVICE)
 @Api(value = FILE_UPLOAD_URL_SERVICE, description = "provides endpoints for file upload management")
 public class FileUploadController {
+
+    private static final String CONTENT_RANGE_NOT_ALLOWED_ERROR = "Content-Range not allowed for %s";
+    private static final String CHUNK_SIZE_NOT_ALLOWED_ERROR = "Chunk size not allowed";
 
     private static final String PREFIX_REGEX = "[b][y][t][e][s][ ]";
     private static final String RANGE_SEPARATOR_REGEX = "[/]";
@@ -58,6 +63,8 @@ public class FileUploadController {
 
     @GetMapping
     public ResponseEntity<List<UploadedFileResource>> getUploadedFiles() {
+        log.info("[FileUploadController.getUploadedFiles] retrieving all uploaded files");
+
         List<UploadedFileResource> uploadedFileResources = storageService.findAll();
         uploadedFileResources.forEach(
                 file -> file.setLinks(linkTo(FileUploadController.class).slash(file.getId()).withRel("uploadedFile")));
@@ -68,6 +75,7 @@ public class FileUploadController {
     @GetMapping(ID_PATH_VARIABLE)
     public void getUploadedFile(@PathVariable(value = ID_PARAM) String id, HttpServletResponse response)
             throws MissingServletRequestParameterException, IOException {
+        log.info("[FileUploadController.getUploadedFile] retrieving uploaded file for {}", id);
 
         checkParams(id, ID_PARAM);
 
@@ -81,6 +89,7 @@ public class FileUploadController {
                                          @RequestParam(value = FILE_PARAM) MultipartFile file,
                                          @RequestHeader(value = CONTENT_RANGE_HEADER, required = false) String contentRange)
             throws MissingServletRequestParameterException {
+        log.info("[FileUploadController.upload] uploading file {} for userId {}. Content-Rage: {}", file, userId, contentRange);
 
         Instant now = Instant.now();
 
@@ -100,7 +109,9 @@ public class FileUploadController {
             Long end = valueOf(range[1]);
 
             if ((end - start) > valueOf(maxChunkSize)) {
-                throw new StorageException("chunk size not allowed");
+                String err = CHUNK_SIZE_NOT_ALLOWED_ERROR;
+                log.error("[FileUploadController.upload] " + err);
+                throw new UnprocessableEntityException(err);
             }
 
             lastChunk = totalBytes <= end + 1L;
@@ -118,7 +129,9 @@ public class FileUploadController {
         }
 
         if (!contentRange.matches(CONTENT_RANGE_REGEX)) {
-            throw new StorageException("Content-Header not accepted");
+            String err = String.format(CONTENT_RANGE_NOT_ALLOWED_ERROR, contentRange);
+            log.error("[FileUploadController.isChunkedRequest] " + err);
+            throw new UnprocessableEntityException(err);
         }
 
         return true;
@@ -126,6 +139,7 @@ public class FileUploadController {
 
     private void checkParams(String value, String paramName) throws MissingServletRequestParameterException {
         if (isBlank(value)) {
+            log.error("[FileUploadController.checkParams] Required {} parameter '{}' is not present", "string", paramName);
             throw new MissingServletRequestParameterException(paramName, "string");
         }
     }
