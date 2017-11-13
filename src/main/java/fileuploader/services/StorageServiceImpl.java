@@ -4,6 +4,7 @@ import fileuploader.controller.resources.UploadedFileResource;
 import fileuploader.domain.UploadedFile;
 import fileuploader.exceptions.ResourceNotFoundException;
 import fileuploader.exceptions.StorageException;
+import fileuploader.projection.UploadedFileInfo;
 import fileuploader.repositories.UploadedFileRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,29 +50,29 @@ public class StorageServiceImpl implements StorageService {
 
     @Override
     public List<UploadedFileResource> findAll() {
-        List<UploadedFile> uploadedFiles = repository.findAllByOrderByUserIdAscFilenameAsc();
+        List<UploadedFileInfo> uploadedFiles = repository.findAllByOrderByUserIdAscFilenameAsc();
         return uploadedFiles.stream()
                 .map(this::apply)
                 .collect(Collectors.toList());
     }
 
-    private UploadedFileResource apply(UploadedFile uploadedFile) {
+    private UploadedFileResource apply(UploadedFileInfo uploadedFile) {
         return UploadedFileResource.builder()
                 .id(uploadedFile.getId())
                 .userId(uploadedFile.getUserId())
                 .filename(uploadedFile.getFilename())
                 .status(uploadedFile.getStatus().getDescription())
-                .uploadedTimeInMilliseconds(getUploadedTimeInMilliseconds(uploadedFile.getCreatedAt(), uploadedFile.getLastModifiedAt()))
+                .uploadedTimeInMilliseconds(getUploadedTimeInMilliseconds(uploadedFile))
                 .chunks(uploadedFile.getChunks())
                 .build();
     }
 
-    private Long getUploadedTimeInMilliseconds(Instant createdAt, Instant lastModifiedAt) {
-        if (createdAt == null || lastModifiedAt == null) {
+    private Long getUploadedTimeInMilliseconds(UploadedFileInfo uploadedFile) {
+        if (uploadedFile == null || uploadedFile.getCreatedAt() == null || uploadedFile.getLastModifiedAt() == null) {
             return null;
         }
 
-        return lastModifiedAt.toEpochMilli() - createdAt.toEpochMilli();
+        return uploadedFile.getLastModifiedAt().toEpochMilli() - uploadedFile.getCreatedAt().toEpochMilli();
     }
 
     @Override

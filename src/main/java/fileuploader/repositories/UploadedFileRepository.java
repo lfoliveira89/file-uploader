@@ -1,6 +1,7 @@
 package fileuploader.repositories;
 
 import fileuploader.domain.UploadedFile;
+import fileuploader.projection.UploadedFileInfo;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,8 +13,7 @@ import java.util.List;
 @Repository
 public interface UploadedFileRepository extends CrudRepository<UploadedFile, Long> {
 
-    // TODO projection: no need to retrieve content
-    List<UploadedFile> findAllByOrderByUserIdAscFilenameAsc();
+    List<UploadedFileInfo> findAllByOrderByUserIdAscFilenameAsc();
 
     UploadedFile findByUserIdAndFilename(String userId, String filename);
 
