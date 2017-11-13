@@ -11,7 +11,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MissingServletRequestParameterException;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
@@ -19,6 +25,12 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 
+import static fileuploader.utils.RestConstants.CONTENT_RANGE_HEADER;
+import static fileuploader.utils.RestConstants.FILE_PARAM;
+import static fileuploader.utils.RestConstants.FILE_UPLOAD_URL_SERVICE;
+import static fileuploader.utils.RestConstants.ID_PARAM;
+import static fileuploader.utils.RestConstants.ID_PATH_VARIABLE;
+import static fileuploader.utils.RestConstants.USER_ID_PARAM;
 import static java.lang.Long.valueOf;
 import static java.lang.Math.ceil;
 import static org.apache.commons.lang.StringUtils.isBlank;
@@ -28,8 +40,8 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
  * Created by luisoliveira on 11/11/17.
  */
 @RestController
-@RequestMapping("/files")
-@Api(value = "/files", description = "provides endpoints for file upload management")
+@RequestMapping(FILE_UPLOAD_URL_SERVICE)
+@Api(value = FILE_UPLOAD_URL_SERVICE, description = "provides endpoints for file upload management")
 public class FileUploadController {
 
     private static final String PREFIX_REGEX = "[b][y][t][e][s][ ]";
@@ -37,7 +49,6 @@ public class FileUploadController {
     private static final String RANGE_INNER_SEPARATOR_REGEX = "[-]";
     private static final String CONTENT_RANGE_REGEX = "^" + PREFIX_REGEX + "[0-9]+" +
             RANGE_INNER_SEPARATOR_REGEX + "[0-9]+" + RANGE_SEPARATOR_REGEX + "[0-9]+$";
-
 
     @Value("${upload.max.chunk.size.bytes}")
     private String maxChunkSize;
@@ -54,11 +65,11 @@ public class FileUploadController {
         return ResponseEntity.ok(uploadedFileResources);
     }
 
-    @GetMapping("/{id}")
-    public void getUploadedFile(@PathVariable String id, HttpServletResponse response)
+    @GetMapping(ID_PATH_VARIABLE)
+    public void getUploadedFile(@PathVariable(value = ID_PARAM) String id, HttpServletResponse response)
             throws MissingServletRequestParameterException, IOException {
 
-        checkParams(id, "id");
+        checkParams(id, ID_PARAM);
 
         UploadedFileResource uploadedFileResource = storageService.findById(valueOf(id));
         response.setHeader("Content-Disposition", "attachment; filename=" + uploadedFileResource.getFilename());
@@ -66,14 +77,14 @@ public class FileUploadController {
     }
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public ResponseEntity<String> upload(@RequestParam(value = "userId") String userId,
-                                         @RequestParam("file") MultipartFile file,
-                                         @RequestHeader(value = "Content-Range", required = false) String contentRange)
+    public ResponseEntity<String> upload(@RequestParam(value = USER_ID_PARAM) String userId,
+                                         @RequestParam(value = FILE_PARAM) MultipartFile file,
+                                         @RequestHeader(value = CONTENT_RANGE_HEADER, required = false) String contentRange)
             throws MissingServletRequestParameterException {
 
         Instant now = Instant.now();
 
-        checkParams(userId, "userId");
+        checkParams(userId, USER_ID_PARAM);
 
         MultipartFileUtils.validate(file);
 

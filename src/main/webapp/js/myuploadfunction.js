@@ -1,5 +1,5 @@
 $(document).ready(function () {
-    $.getJSON("files").done(function (data) {
+    $.getJSON("/api/files").done(function (data) {
         $("tr:has(td)").remove();
 
         $.each(data, function (key, value) {
@@ -16,11 +16,6 @@ $(document).ready(function () {
     });
 });
 
-function aaa() {
-    console.log(document.getElementById("userId").value);
-    return document.getElementById("userId").value;
-}
-
 $(function () {
     $('#fileupload').bind('fileuploadsubmit', function (e, data) {
         data.formData = {userId: $('#userId').val()};
@@ -36,7 +31,7 @@ $(function () {
         },
 
         done: function (e, data) {
-            $.getJSON("files").done(function (data) {
+            $.getJSON("/api/files").done(function (data) {
                 $("tr:has(td)").remove();
 
                 $.each(data, function (key, value) {
