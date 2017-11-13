@@ -96,21 +96,22 @@ public class StorageServiceImpl implements StorageService {
         String filename = StringUtils.cleanPath(file.getOriginalFilename());
 
         Path tempFile = getTempFile(userId, filename);
-        UploadedFile uploadedFile = repository.findByUserIdAndFilename(userId, filename);
+
+        boolean exists = repository.existsByUserIdAndFilename(userId, filename);
         try {
             Files.write(tempFile, file.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 
             if (lastChunk) {
-                saveOrUpdateCompletedUploadedFile(userId, totalChunks, uploadedTime, filename, uploadedFile, tempFile);
+                saveOrUpdateCompletedUploadedFile(exists, userId, totalChunks, uploadedTime, filename, tempFile);
                 deleteTmpFileIfExists(tempFile);
             } else {
-                savePendingUploadedFile(userId, uploadedTime, filename, uploadedFile);
+                savePendingUploadedFile(exists, userId, uploadedTime, filename);
             }
         } catch (Exception e) {
             String err = format(COULD_NOT_PROCESS_FILE_ERROR, userId, filename, e.getMessage());
             log.error("[StorageServiceImpl.store] " + err);
 
-            saveOrUpdateFailedUploadedFile(userId, totalChunks, uploadedTime, filename, uploadedFile, err);
+            saveOrUpdateFailedUploadedFile(exists, userId, totalChunks, uploadedTime, filename, err);
             deleteTmpFileIfExists(tempFile);
 
             throw new StorageException(err);
@@ -134,11 +135,11 @@ public class StorageServiceImpl implements StorageService {
         return Paths.get(home, tmpDirectory, userId + "_" + filename);
     }
 
-    private void saveOrUpdateCompletedUploadedFile(String userId, Integer totalChunks, Instant uploadedTime,
-                                                   String filename, UploadedFile uploadedFile, Path tmpLocation)
+    private void saveOrUpdateCompletedUploadedFile(boolean exists, String userId, Integer totalChunks, Instant uploadedTime,
+                                                   String filename, Path tmpLocation)
             throws IOException {
-        if (uploadedFile == null) {
-            UploadedFile file = UploadedFile.builder()
+        if (!exists) {
+            UploadedFile uploadedFile = UploadedFile.builder()
                     .userId(userId)
                     .filename(filename)
                     .createdAt(uploadedTime)
@@ -148,19 +149,15 @@ public class StorageServiceImpl implements StorageService {
                     .content(readAllBytes(tmpLocation))
                     .build();
 
-            repository.save(file);
-        } else {
-            uploadedFile.setLastModifiedAt(uploadedTime);
-            uploadedFile.setStatus(COMPLETED);
-            uploadedFile.setChunks(totalChunks);
-            uploadedFile.setContent(readAllBytes(tmpLocation));
-
             repository.save(uploadedFile);
+        } else {
+            repository.updateByUserIdAndFilename(userId, filename, uploadedTime, COMPLETED,
+                    totalChunks, readAllBytes(tmpLocation));
         }
     }
 
-    private void savePendingUploadedFile(String userId, Instant uploadedTime, String filename, UploadedFile uploadedFile) {
-        if (uploadedFile == null) {
+    private void savePendingUploadedFile(boolean exists, String userId, Instant uploadedTime, String filename) {
+        if (!exists) {
             UploadedFile file = UploadedFile.builder()
                     .userId(userId)
                     .filename(filename)
@@ -172,9 +169,9 @@ public class StorageServiceImpl implements StorageService {
         }
     }
 
-    private void saveOrUpdateFailedUploadedFile(String userId, Integer totalChunks, Instant uploadedTime,
-                                                String filename, UploadedFile uploadedFile, String rootCause) {
-        if (uploadedFile == null) {
+    private void saveOrUpdateFailedUploadedFile(boolean exists, String userId, Integer totalChunks, Instant uploadedTime,
+                                                String filename, String rootCause) {
+        if (!exists) {
             UploadedFile file = UploadedFile.builder()
                     .userId(userId)
                     .filename(filename)
@@ -187,12 +184,7 @@ public class StorageServiceImpl implements StorageService {
 
             repository.save(file);
         } else {
-            uploadedFile.setLastModifiedAt(uploadedTime);
-            uploadedFile.setStatus(FAILED);
-            uploadedFile.setChunks(totalChunks);
-            uploadedFile.setRootCause(rootCause);
-
-            repository.save(uploadedFile);
+            repository.updateByUserIdAndFilename(userId, filename, uploadedTime, FAILED, totalChunks, rootCause);
         }
     }
 
