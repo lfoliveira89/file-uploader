@@ -158,21 +158,21 @@ public class StorageServiceImpl implements StorageService {
 
     private void savePendingUploadedFile(boolean exists, String userId, Instant uploadedTime, String filename) {
         if (!exists) {
-            UploadedFile file = UploadedFile.builder()
+            UploadedFile uploadedFile = UploadedFile.builder()
                     .userId(userId)
                     .filename(filename)
                     .createdAt(uploadedTime)
                     .status(PENDING)
                     .build();
 
-            repository.save(file);
+            repository.save(uploadedFile);
         }
     }
 
     private void saveOrUpdateFailedUploadedFile(boolean exists, String userId, Integer totalChunks, Instant uploadedTime,
                                                 String filename, String rootCause) {
         if (!exists) {
-            UploadedFile file = UploadedFile.builder()
+            UploadedFile uploadedFile = UploadedFile.builder()
                     .userId(userId)
                     .filename(filename)
                     .createdAt(uploadedTime)
@@ -182,7 +182,7 @@ public class StorageServiceImpl implements StorageService {
                     .rootCause(rootCause)
                     .build();
 
-            repository.save(file);
+            repository.save(uploadedFile);
         } else {
             repository.updateByUserIdAndFilename(userId, filename, uploadedTime, FAILED, totalChunks, rootCause);
         }
