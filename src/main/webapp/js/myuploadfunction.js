@@ -1,4 +1,4 @@
-$(document).ready(function () {
+function getFiles() {
     $.getJSON("/api/files").done(function (data) {
         $("tr:has(td)").remove();
 
@@ -14,6 +14,10 @@ $(document).ready(function () {
             );
         });
     });
+}
+
+$(document).ready(function () {
+    getFiles();
 });
 
 $(function () {
@@ -30,22 +34,18 @@ $(function () {
             data.files[0].uploadName = filename;
         },
 
-        done: function (e, data) {
-            $.getJSON("/api/files").done(function (data) {
-                $("tr:has(td)").remove();
+        chunkfail: function (e, data) {
+            getFiles();
+        },
 
-                $.each(data, function (key, value) {
-                    $("#uploaded-files").append(
-                        $('<tr/>')
-                            .append($('<td/>').text(value.userId))
-                            .append($('<td/>').text(value.filename))
-                            .append($('<td/>').text(value.status))
-                            .append($('<td/>').text(value.uploadedTimeInMilliseconds))
-                            .append($('<td/>').text(value.chunks))
-                            .append($('<td/>').html("<a href='" + value.links.href + "'>Click</a>"))
-                    );
-                });
-            });
+        chunkdone: function (e, data) {
+            if ((data.uploadedBytes - data.maxChunkSize) <= 0) {
+                getFiles();
+            }
+        },
+
+        done: function (e, data) {
+            getFiles();
         },
 
         progressall: function (e, data) {
