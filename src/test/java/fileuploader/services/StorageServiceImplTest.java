@@ -6,17 +6,22 @@ import fileuploader.exceptions.ResourceNotFoundException;
 import fileuploader.exceptions.StorageException;
 import fileuploader.projection.UploadedFileInfo;
 import fileuploader.repositories.UploadedFileRepository;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.util.List;
 
@@ -29,6 +34,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -42,10 +49,37 @@ public class StorageServiceImplTest {
     @InjectMocks
     private StorageServiceImpl service;
 
+    private String tmpDirectory = "fileUploaderTest";
+
     @Before
-    public void setup() {
+    public void setup() throws IOException {
         initMocks(this);
-        ReflectionTestUtils.setField(service, "tmpDirectory", "fileUploaderTest");
+        ReflectionTestUtils.setField(service, "tmpDirectory", tmpDirectory);
+    }
+
+    @After
+    public void tearDown() throws IOException {
+        Path path = getTemporaryDirectory();
+        if (path.toFile().exists()) {
+            Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    Files.delete(file);
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                    Files.delete(dir);
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
+    }
+
+    private Path getTemporaryDirectory() {
+        String home = System.getProperty("user.home");
+        return Paths.get(home, tmpDirectory);
     }
 
     @Test
@@ -162,13 +196,12 @@ public class StorageServiceImplTest {
         String userId = "userId";
         String filename = "test.pdf";
         Instant uploadedTime = Instant.now();
-        Integer totalChunks = null;
         MockMultipartFile multipartFile = dummyMultipartFile(filename);
 
         when(repository.existsByUserIdAndFilename(userId, filename)).thenReturn(false);
 
         //when
-        service.store(userId, multipartFile, totalChunks, true, uploadedTime);
+        service.store(userId, multipartFile, null, true, uploadedTime);
 
         //then
         verify(repository).existsByUserIdAndFilename(userId, filename);
@@ -216,10 +249,31 @@ public class StorageServiceImplTest {
         verifyNoMoreInteractions(repository);
     }
 
-    //TODO implement on before method: delete all files created for tests
+    @Test(expected = StorageException.class)
+    public void storeShouldThrowStorageExceptionWhenSomethingGoesWrongWhileCreatingRecord() throws Exception {
+        //given
+        String userId = "userId";
+        String filename = "test.pdf";
+        Instant uploadedTime = Instant.now();
+        Integer totalChunks = 10;
+        MockMultipartFile multipartFile = dummyMultipartFile(filename);
+
+        when(repository.existsByUserIdAndFilename(userId, filename)).thenReturn(false);
+        doThrow(IOException.class).doReturn(null).when(repository).save(any(UploadedFile.class));
+
+        //when
+        try {
+            service.store(userId, multipartFile, totalChunks, true, uploadedTime);
+        } finally {
+            //then
+            verify(repository).existsByUserIdAndFilename(userId, filename);
+            verify(repository, times(2)).save(any(UploadedFile.class));
+            verifyNoMoreInteractions(repository);
+        }
+    }
 
     @Test(expected = StorageException.class)
-    public void storeShouldThrowStorageExceptionForNotChunkedTransferWhenSomethingGoesWrong() throws Exception {
+    public void storeShouldThrowStorageExceptionWhenSomethingGoesWrongWhileUpdatingRecord() throws Exception {
         //given
         String userId = "userId";
         String filename = "test.pdf";
@@ -228,12 +282,7 @@ public class StorageServiceImplTest {
         MockMultipartFile multipartFile = dummyMultipartFile(filename);
 
         when(repository.existsByUserIdAndFilename(userId, filename)).thenReturn(true);
-        doAnswer(new Answer() {
-            @Override
-            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-                throw new IOException("error");
-            }
-        }).when(repository)
+        doAnswer(invocationOnMock -> {throw new IOException("error");}).when(repository)
                 .updateByUserIdAndFilename(userId, filename, uploadedTime, COMPLETED, totalChunks, multipartFile.getBytes());
 
         //when
