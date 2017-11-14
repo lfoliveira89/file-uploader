@@ -5,6 +5,9 @@ import fileuploader.exceptions.UnprocessableEntityException;
 import fileuploader.services.StorageService;
 import fileuploader.utils.MultipartFileUtils;
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +66,13 @@ public class FileUploadController {
     private StorageService storageService;
 
     @GetMapping
+    @ApiOperation(value = "Returns uploaded files",
+            notes = "Returns a complete list of uploaded files")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Successful retrieval of uploaded files",
+                    response = UploadedFileResource.class, responseContainer = "List"),
+            @ApiResponse(code = 500, message = "Internal server error")
+    })
     public ResponseEntity<List<UploadedFileResource>> getUploadedFiles() {
         log.info("[FileUploadController.getUploadedFiles] retrieving all uploaded files");
 
@@ -74,6 +84,13 @@ public class FileUploadController {
     }
 
     @GetMapping(ID_PATH_VARIABLE)
+    @ApiOperation(value = "Returns an uploaded file",
+            notes = "Returns an uploaded file by its id")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Successful retrieval of uploaded file"),
+            @ApiResponse(code = 404, message = "File not found"),
+            @ApiResponse(code = 500, message = "Internal server error")
+    })
     public void getUploadedFile(@PathVariable(value = ID_PARAM) String id, HttpServletResponse response)
             throws MissingServletRequestParameterException, IOException {
         log.info("[FileUploadController.getUploadedFile] retrieving uploaded file for {}", id);
@@ -86,6 +103,13 @@ public class FileUploadController {
     }
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+    @ApiOperation(value = "Uploads a file",
+            notes = "Uploads a file either via multipart or chunked transfer")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Uploaded file successfully", response = String.class),
+            @ApiResponse(code = 422, message = "Unprocessable entity"),
+            @ApiResponse(code = 500, message = "Internal server error")
+    })
     public ResponseEntity<String> upload(@RequestParam(value = USER_ID_PARAM) String userId,
                                          @RequestParam(value = FILE_PARAM) MultipartFile file,
                                          @RequestHeader(value = CONTENT_RANGE_HEADER, required = false) String contentRange)
