@@ -10,7 +10,7 @@ function getFiles() {
                     .append($('<td/>').text(value.status))
                     .append($('<td/>').text(value.uploadedTimeInMilliseconds))
                     .append($('<td/>').text(value.chunks))
-                    .append($('<td/>').html("<a href='" + value.links.href + "'>Click</a>"))
+                    .append($('<td/>').html(value.status === 'Completed' ? "<a href='" + value.links.href + "'>Click</a>" : ""))
             );
         });
     });
