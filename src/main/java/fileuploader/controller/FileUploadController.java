@@ -52,7 +52,8 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 public class FileUploadController {
 
     private static final String CONTENT_RANGE_NOT_ALLOWED_ERROR = "Content-Range not allowed for %s";
-    private static final String CHUNK_SIZE_NOT_ALLOWED_ERROR = "Chunk size not allowed. Max chunks size is %s bytes";
+    private static final String FILE_SIZE_NOT_ALLOWED_ERROR = "File size not allowed. File size: %s bytes. Max file size allowed: %s bytes";
+    private static final String CHUNK_SIZE_NOT_ALLOWED_ERROR = "Chunk size not allowed. Chunk size: %s bytes. Max chunks size allowed: %s bytes";
 
     private static final String PREFIX_REGEX = "[b][y][t][e][s][ ]";
     private static final String RANGE_SEPARATOR_REGEX = "[/]";
@@ -60,6 +61,8 @@ public class FileUploadController {
     private static final String CONTENT_RANGE_REGEX = "^" + PREFIX_REGEX + "[0-9]+" +
             RANGE_INNER_SEPARATOR_REGEX + "[0-9]+" + RANGE_SEPARATOR_REGEX + "[0-9]+$";
 
+    @Value("${upload.max.file.size.bytes}")
+    private String maxFileSize;
     @Value("${upload.max.chunk.size.bytes}")
     private String maxChunkSize;
 
@@ -114,7 +117,7 @@ public class FileUploadController {
     public ResponseEntity<String> upload(@RequestParam(value = USER_ID_PARAM) String userId,
                                          @RequestParam(value = FILE_PARAM) MultipartFile file,
                                          @RequestHeader(value = CONTENT_RANGE_HEADER, required = false) String contentRange)
-            throws MissingServletRequestParameterException {
+            throws MissingServletRequestParameterException, IOException {
         log.info("[FileUploadController.upload] uploading file {} for userId {}. Content-Rage: {}",
                 file == null ? "" : file.getOriginalFilename(), userId, contentRange);
 
@@ -135,19 +138,25 @@ public class FileUploadController {
             Long start = valueOf(range[0]);
             Long end = valueOf(range[1]) + 1;
 
-            if ((end - start) > valueOf(maxChunkSize)) {
-                String err = format(CHUNK_SIZE_NOT_ALLOWED_ERROR, maxChunkSize);
-                log.error("[FileUploadController.upload] " + err);
-                throw new UnprocessableEntityException(err);
-            }
+            validateFileSize(totalBytes);
+            validateChunkSize(start, end);
 
             lastChunk = totalBytes <= end;
             totalChunks = lastChunk ? (int) ceil((double) totalBytes / valueOf(maxChunkSize)) : null;
+        } else {
+            validateFileSize(file.getBytes().length);
         }
 
         storageService.store(userId, file, totalChunks, lastChunk, now);
 
         return ResponseEntity.ok("{}");
+    }
+
+    private void checkParams(String value, String paramName) throws MissingServletRequestParameterException {
+        if (isBlank(value)) {
+            log.error("[FileUploadController.checkParams] Required {} parameter '{}' is not present", "string", paramName);
+            throw new MissingServletRequestParameterException(paramName, "string");
+        }
     }
 
     private boolean isChunkedRequest(String contentRange) {
@@ -164,10 +173,20 @@ public class FileUploadController {
         return true;
     }
 
-    private void checkParams(String value, String paramName) throws MissingServletRequestParameterException {
-        if (isBlank(value)) {
-            log.error("[FileUploadController.checkParams] Required {} parameter '{}' is not present", "string", paramName);
-            throw new MissingServletRequestParameterException(paramName, "string");
+    private void validateFileSize(long totalBytes) {
+        if (totalBytes > valueOf(maxFileSize)) {
+            String err = format(FILE_SIZE_NOT_ALLOWED_ERROR, totalBytes, maxFileSize);
+            log.error("[FileUploadController.upload] " + err);
+            throw new UnprocessableEntityException(err);
+        }
+    }
+
+    private void validateChunkSize(Long start, Long end) {
+        long chunkSize = end - start;
+        if (chunkSize > valueOf(maxChunkSize)) {
+            String err = format(CHUNK_SIZE_NOT_ALLOWED_ERROR, chunkSize, maxChunkSize);
+            log.error("[FileUploadController.upload] " + err);
+            throw new UnprocessableEntityException(err);
         }
     }
 

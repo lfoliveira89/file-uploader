@@ -220,8 +220,28 @@ public class FileUploadControllerTest {
     }
 
     @Test
+    public void uploadReturnHttpStatus422WhenFileSizeIsGreaterThanMaxFileSizeForChunkedTransfer() throws Exception {
+        //given
+        ReflectionTestUtils.setField(controller, "maxFileSize", "1");
+
+        MockMultipartFile file = dummyMultipartFile("test.pdf", "test".getBytes());
+
+        //when
+        mockMvc.perform(
+                fileUpload(FILE_UPLOAD_URL_SERVICE)
+                        .file(file)
+                        .header(CONTENT_RANGE_HEADER, "bytes 0-1/4")
+                        .param(USER_ID_PARAM, "userId"))
+                .andExpect(status().isUnprocessableEntity());
+
+        //then
+        verifyNoMoreInteractions(service);
+    }
+
+    @Test
     public void uploadReturnHttpStatus422WhenChunkSizeIsGreaterThanMaxChunkSize() throws Exception {
         //given
+        ReflectionTestUtils.setField(controller, "maxFileSize", "100");
         ReflectionTestUtils.setField(controller, "maxChunkSize", "5");
 
         MockMultipartFile file = dummyMultipartFile("test.pdf", "test".getBytes());
@@ -239,8 +259,28 @@ public class FileUploadControllerTest {
     }
 
     @Test
+    public void uploadReturnHttpStatus422WhenFileSizeIsGreaterThanMaxFileSizeForMultipartTransfer() throws Exception {
+        //given
+        ReflectionTestUtils.setField(controller, "maxFileSize", "1");
+
+        MockMultipartFile file = dummyMultipartFile("test.pdf", "test".getBytes());
+
+        //when
+        mockMvc.perform(
+                fileUpload(FILE_UPLOAD_URL_SERVICE)
+                        .file(file)
+                        .param(USER_ID_PARAM, "userId"))
+                .andExpect(status().isUnprocessableEntity());
+
+        //then
+        verifyNoMoreInteractions(service);
+    }
+
+    @Test
     public void uploadShouldReturnSuccessfullyForMultipartTransfer() throws Exception {
         //given
+        ReflectionTestUtils.setField(controller, "maxFileSize", "100");
+
         MockMultipartFile file = dummyMultipartFile("test.pdf", "test".getBytes());
 
         doNothing().when(service).store(eq("userId"), eq(file), eq(null), eq(true), any(Instant.class));
@@ -261,6 +301,7 @@ public class FileUploadControllerTest {
     @Test
     public void uploadShouldReturnSuccessfullyForFirstChunkedTransfer() throws Exception {
         //given
+        ReflectionTestUtils.setField(controller, "maxFileSize", "100");
         ReflectionTestUtils.setField(controller, "maxChunkSize", "5");
 
         MockMultipartFile file = dummyMultipartFile("test.pdf", "test".getBytes());
@@ -284,6 +325,7 @@ public class FileUploadControllerTest {
     @Test
     public void uploadShouldReturnSuccessfullyForFirstLastTransfer() throws Exception {
         //given
+        ReflectionTestUtils.setField(controller, "maxFileSize", "100");
         ReflectionTestUtils.setField(controller, "maxChunkSize", "5");
 
         MockMultipartFile file = dummyMultipartFile("test.pdf", "test".getBytes());
