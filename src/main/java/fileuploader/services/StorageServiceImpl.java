@@ -60,11 +60,15 @@ public class StorageServiceImpl implements StorageService {
         return UploadedFileResource.builder()
                 .id(uploadedFile.getId())
                 .userId(uploadedFile.getUserId())
-                .filename(uploadedFile.getFilename())
+                .filename(extractOriginalFilename(uploadedFile.getFilename()))
                 .status(uploadedFile.getStatus().getDescription())
                 .uploadedTimeInMilliseconds(getUploadedTimeInMilliseconds(uploadedFile))
                 .chunks(uploadedFile.getChunks())
                 .build();
+    }
+
+    private String extractOriginalFilename(String filename) {
+        return filename.contains("_") ? filename.substring(filename.lastIndexOf("_") + 1) : filename;
     }
 
     private Long getUploadedTimeInMilliseconds(UploadedFileInfo uploadedFile) {
@@ -85,7 +89,7 @@ public class StorageServiceImpl implements StorageService {
         }
 
         return UploadedFileResource.builder()
-                .filename(uploadedFile.getFilename())
+                .filename(extractOriginalFilename(uploadedFile.getFilename()))
                 .inputStream(new ByteArrayInputStream(uploadedFile.getContent()))
                 .build();
     }

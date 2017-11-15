@@ -49,7 +49,7 @@ public class StorageServiceImplTest {
     @InjectMocks
     private StorageServiceImpl service;
 
-    private String tmpDirectory = "fileUploaderTest";
+    private String tmpDirectory = "fileuploader_test";
 
     @Before
     public void setup() throws IOException {
@@ -88,7 +88,7 @@ public class StorageServiceImplTest {
         UploadedFileInfo uploadedFileInfo = Mockito.mock(UploadedFileInfo.class);
         when(uploadedFileInfo.getId()).thenReturn(1L);
         when(uploadedFileInfo.getUserId()).thenReturn("userId");
-        when(uploadedFileInfo.getFilename()).thenReturn("test.pdf");
+        when(uploadedFileInfo.getFilename()).thenReturn(Instant.now().toEpochMilli() + "_test_test.pdf");
         when(uploadedFileInfo.getStatus()).thenReturn(COMPLETED);
         Instant createdAt = Instant.now();
         when(uploadedFileInfo.getCreatedAt()).thenReturn(createdAt);
@@ -282,7 +282,9 @@ public class StorageServiceImplTest {
         MockMultipartFile multipartFile = dummyMultipartFile(filename);
 
         when(repository.existsByUserIdAndFilename(userId, filename)).thenReturn(true);
-        doAnswer(invocationOnMock -> {throw new IOException("error");}).when(repository)
+        doAnswer(invocationOnMock -> {
+            throw new IOException("error");
+        }).when(repository)
                 .updateByUserIdAndFilename(userId, filename, uploadedTime, COMPLETED, totalChunks, multipartFile.getBytes());
 
         //when

@@ -14,6 +14,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -25,6 +26,7 @@ import static fileuploader.utils.RestConstants.FILE_UPLOAD_URL_SERVICE;
 import static fileuploader.utils.RestConstants.ID_PATH_VARIABLE;
 import static fileuploader.utils.RestConstants.USER_ID_PARAM;
 import static java.util.Collections.singletonList;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -134,11 +136,14 @@ public class FileUploadControllerTest {
         when(service.findById(id)).thenReturn(dummyUploadedFileResource);
 
         //when
-        mockMvc.perform(
+        MvcResult mvcResult = mockMvc.perform(
                 get(FILE_UPLOAD_URL_SERVICE + ID_PATH_VARIABLE, id))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andReturn();
 
         //then
+        assertEquals(mvcResult.getResponse().getHeader("Content-Disposition"), "attachment; filename=" + "test.pdf");
+
         verify(service).findById(id);
         verifyNoMoreInteractions(service);
     }
