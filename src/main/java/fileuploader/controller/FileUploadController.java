@@ -38,6 +38,7 @@ import static fileuploader.utils.RestConstants.ID_PATH_VARIABLE;
 import static fileuploader.utils.RestConstants.USER_ID_PARAM;
 import static java.lang.Long.valueOf;
 import static java.lang.Math.ceil;
+import static java.lang.String.format;
 import static org.apache.commons.lang.StringUtils.isBlank;
 import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 
@@ -51,7 +52,7 @@ import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 public class FileUploadController {
 
     private static final String CONTENT_RANGE_NOT_ALLOWED_ERROR = "Content-Range not allowed for %s";
-    private static final String CHUNK_SIZE_NOT_ALLOWED_ERROR = "Chunk size not allowed";
+    private static final String CHUNK_SIZE_NOT_ALLOWED_ERROR = "Chunk size not allowed. Max chunks size is %s bytes";
 
     private static final String PREFIX_REGEX = "[b][y][t][e][s][ ]";
     private static final String RANGE_SEPARATOR_REGEX = "[/]";
@@ -132,15 +133,15 @@ public class FileUploadController {
 
             String[] range = chunks[0].split(RANGE_INNER_SEPARATOR_REGEX);
             Long start = valueOf(range[0]);
-            Long end = valueOf(range[1]);
+            Long end = valueOf(range[1]) + 1;
 
             if ((end - start) > valueOf(maxChunkSize)) {
-                String err = CHUNK_SIZE_NOT_ALLOWED_ERROR;
+                String err = format(CHUNK_SIZE_NOT_ALLOWED_ERROR, maxChunkSize);
                 log.error("[FileUploadController.upload] " + err);
                 throw new UnprocessableEntityException(err);
             }
 
-            lastChunk = totalBytes <= end + 1L;
+            lastChunk = totalBytes <= end;
             totalChunks = lastChunk ? (int) ceil((double) totalBytes / valueOf(maxChunkSize)) : null;
         }
 
@@ -155,7 +156,7 @@ public class FileUploadController {
         }
 
         if (!contentRange.matches(CONTENT_RANGE_REGEX)) {
-            String err = String.format(CONTENT_RANGE_NOT_ALLOWED_ERROR, contentRange);
+            String err = format(CONTENT_RANGE_NOT_ALLOWED_ERROR, contentRange);
             log.error("[FileUploadController.isChunkedRequest] " + err);
             throw new UnprocessableEntityException(err);
         }

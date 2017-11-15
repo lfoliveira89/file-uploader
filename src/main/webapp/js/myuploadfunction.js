@@ -34,10 +34,6 @@ $(function () {
             data.files[0].uploadName = filename;
         },
 
-        chunkfail: function (e, data) {
-            getFiles();
-        },
-
         chunkdone: function (e, data) {
             if ((data.uploadedBytes - data.maxChunkSize) <= 0) {
                 getFiles();
@@ -58,6 +54,7 @@ $(function () {
 
         fail: function (e, data) {
             alert(data.jqXHR.responseText);
+            getFiles();
         },
 
         dropZone: $('#dropzone')
