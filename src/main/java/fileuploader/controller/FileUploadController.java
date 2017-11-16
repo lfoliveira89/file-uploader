@@ -1,5 +1,6 @@
 package fileuploader.controller;
 
+import fileuploader.controller.resources.DownloadableFileResource;
 import fileuploader.controller.resources.UploadedFileResource;
 import fileuploader.exceptions.UnprocessableEntityException;
 import fileuploader.services.StorageService;
@@ -100,9 +101,9 @@ public class FileUploadController {
 
         checkParams(id, ID_PARAM);
 
-        UploadedFileResource uploadedFileResource = storageService.findById(valueOf(id));
-        response.setHeader("Content-Disposition", "attachment; filename=" + uploadedFileResource.getFilename());
-        IOUtils.copy(uploadedFileResource.getInputStream(), new BufferedOutputStream(response.getOutputStream()));
+        DownloadableFileResource downloadableFileResource = storageService.findById(valueOf(id));
+        response.setHeader("Content-Disposition", "attachment; filename=" + downloadableFileResource.getFilename());
+        IOUtils.copy(downloadableFileResource.getInputStream(), new BufferedOutputStream(response.getOutputStream()));
     }
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_UTF8_VALUE)

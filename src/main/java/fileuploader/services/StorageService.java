@@ -1,5 +1,6 @@
 package fileuploader.services;
 
+import fileuploader.controller.resources.DownloadableFileResource;
 import fileuploader.controller.resources.UploadedFileResource;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,7 +14,7 @@ public interface StorageService {
 
     List<UploadedFileResource> findAll();
 
-    UploadedFileResource findById(Long id);
+    DownloadableFileResource findById(Long id);
 
     void store(String userId, MultipartFile file, Integer totalChunks, boolean lastChunk, Instant uploadedTime);
 

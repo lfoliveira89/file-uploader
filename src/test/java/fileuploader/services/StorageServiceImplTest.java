@@ -1,5 +1,6 @@
 package fileuploader.services;
 
+import fileuploader.controller.resources.DownloadableFileResource;
 import fileuploader.controller.resources.UploadedFileResource;
 import fileuploader.domain.UploadedFile;
 import fileuploader.exceptions.ResourceNotFoundException;
@@ -161,13 +162,12 @@ public class StorageServiceImplTest {
         when(repository.findOne(id)).thenReturn(uploadedFile);
 
         //when
-        UploadedFileResource uploadedFileResource = service.findById(id);
+        DownloadableFileResource downloadableFileResource = service.findById(id);
 
         //then
-        assertNotNull(uploadedFileResource);
-        assertNull(uploadedFileResource.getId());
-        assertEquals(uploadedFileResource.getFilename(), "test.pdf");
-        assertNotNull(uploadedFileResource.getInputStream());
+        assertNotNull(downloadableFileResource);
+        assertEquals(downloadableFileResource.getFilename(), "test.pdf");
+        assertNotNull(downloadableFileResource.getInputStream());
 
         verify(repository).findOne(id);
         verifyNoMoreInteractions(repository);

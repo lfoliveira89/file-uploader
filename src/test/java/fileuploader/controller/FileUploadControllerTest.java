@@ -1,5 +1,6 @@
 package fileuploader.controller;
 
+import fileuploader.controller.resources.DownloadableFileResource;
 import fileuploader.controller.resources.UploadedFileResource;
 import fileuploader.exceptions.ResourceNotFoundException;
 import fileuploader.services.StorageService;
@@ -128,12 +129,12 @@ public class FileUploadControllerTest {
         //given
         Long id = 1L;
 
-        UploadedFileResource dummyUploadedFileResource = UploadedFileResource.builder()
+        DownloadableFileResource dummyDownloadableFileResource = DownloadableFileResource.builder()
                 .filename("test.pdf")
                 .inputStream(IOUtils.toInputStream("test data", "UTF-8"))
                 .build();
 
-        when(service.findById(id)).thenReturn(dummyUploadedFileResource);
+        when(service.findById(id)).thenReturn(dummyDownloadableFileResource);
 
         //when
         MvcResult mvcResult = mockMvc.perform(

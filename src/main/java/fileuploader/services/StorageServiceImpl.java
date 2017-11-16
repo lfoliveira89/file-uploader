@@ -1,5 +1,6 @@
 package fileuploader.services;
 
+import fileuploader.controller.resources.DownloadableFileResource;
 import fileuploader.controller.resources.UploadedFileResource;
 import fileuploader.domain.UploadedFile;
 import fileuploader.exceptions.ResourceNotFoundException;
@@ -80,7 +81,7 @@ public class StorageServiceImpl implements StorageService {
     }
 
     @Override
-    public UploadedFileResource findById(Long id) {
+    public DownloadableFileResource findById(Long id) {
         UploadedFile uploadedFile = repository.findOne(id);
         if (uploadedFile == null) {
             String err = format(ERROR_UPLOADED_FILE_NOT_FOUND_MSG, id);
@@ -88,7 +89,7 @@ public class StorageServiceImpl implements StorageService {
             throw new ResourceNotFoundException(err);
         }
 
-        return UploadedFileResource.builder()
+        return DownloadableFileResource.builder()
                 .filename(extractOriginalFilename(uploadedFile.getFilename()))
                 .inputStream(new ByteArrayInputStream(uploadedFile.getContent()))
                 .build();
