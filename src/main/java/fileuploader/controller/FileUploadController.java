@@ -73,8 +73,7 @@ public class FileUploadController {
     @ApiOperation(value = "Returns uploaded files",
             notes = "Returns a complete list of uploaded files")
     @ApiResponses(value = {
-            @ApiResponse(code = 200, message = "Successful retrieval of uploaded files",
-                    response = UploadedFileResource.class, responseContainer = "List"),
+            @ApiResponse(code = 200, message = "Successful retrieval of uploaded files"),
             @ApiResponse(code = 500, message = "Internal server error")
     })
     public ResponseEntity<List<UploadedFileResource>> getUploadedFiles() {
@@ -88,8 +87,8 @@ public class FileUploadController {
     }
 
     @GetMapping(ID_PATH_VARIABLE)
-    @ApiOperation(value = "Returns an uploaded file",
-            notes = "Returns an uploaded file by its id")
+    @ApiOperation(value = "Downloads an uploaded file",
+            notes = "Downloads an uploaded file by its id")
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = "Successful retrieval of uploaded file"),
             @ApiResponse(code = 404, message = "File not found"),
@@ -110,7 +109,7 @@ public class FileUploadController {
     @ApiOperation(value = "Uploads a file",
             notes = "Uploads a file either via multipart or chunked transfer")
     @ApiResponses(value = {
-            @ApiResponse(code = 200, message = "Uploaded file successfully", response = String.class),
+            @ApiResponse(code = 200, message = "Uploaded file successfully"),
             @ApiResponse(code = 422, message = "Unprocessable entity"),
             @ApiResponse(code = 500, message = "Internal server error")
     })

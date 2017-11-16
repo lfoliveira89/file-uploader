@@ -73,7 +73,7 @@ Sample:
         <td>/api/files/{id}</td>
         <td>GET</td>
         <td>localhost:8080/api/files/1</td>
-        <td>Returns an uploaded file by its id</td>
+        <td>Downloads an uploaded file by its id</td>
     </tr>
     <tr>
         <td>/api/files</td>
