@@ -5,7 +5,6 @@ import fileuploader.controller.resources.UploadedFileResource;
 import fileuploader.domain.UploadedFile;
 import fileuploader.exceptions.ResourceNotFoundException;
 import fileuploader.exceptions.StorageException;
-import fileuploader.exceptions.UnprocessableEntityException;
 import fileuploader.projection.UploadedFileInfo;
 import fileuploader.repositories.UploadedFileRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -86,7 +85,7 @@ public class StorageServiceImpl implements StorageService {
     public DownloadableFileResource findById(Long id) {
         UploadedFile uploadedFile = repository.findOne(id);
         checkResourceNotFound(id, uploadedFile);
-        checkUnprocessableEntity(id, uploadedFile);
+        checkUploadedFileStatus(id, uploadedFile);
 
         return DownloadableFileResource.builder()
                 .filename(extractOriginalFilename(uploadedFile.getFilename()))
@@ -102,11 +101,11 @@ public class StorageServiceImpl implements StorageService {
         }
     }
 
-    private void checkUnprocessableEntity(Long id, UploadedFile uploadedFile) {
+    private void checkUploadedFileStatus(Long id, UploadedFile uploadedFile) {
         if (!COMPLETED.equals(uploadedFile.getStatus())) {
             String err = format(CANNOT_DOWNLOAD_INCOMPLETE_FILE_MSG, id, uploadedFile.getStatus());
             log.error("[StorageServiceImpl.findById] " + err);
-            throw new UnprocessableEntityException(err);
+            throw new StorageException(err);
         }
     }
 

@@ -5,7 +5,6 @@ import fileuploader.controller.resources.UploadedFileResource;
 import fileuploader.domain.UploadedFile;
 import fileuploader.exceptions.ResourceNotFoundException;
 import fileuploader.exceptions.StorageException;
-import fileuploader.exceptions.UnprocessableEntityException;
 import fileuploader.projection.UploadedFileInfo;
 import fileuploader.repositories.UploadedFileRepository;
 import org.junit.After;
@@ -192,8 +191,8 @@ public class StorageServiceImplTest {
         }
     }
 
-    @Test(expected = UnprocessableEntityException.class)
-    public void findByIdShouldThrowUnprocessableEntityExceptionWhenUploadedFileHasPendingStatus() {
+    @Test(expected = StorageException.class)
+    public void findByIdShouldThrowStorageExceptionWhenUploadedFileHasPendingStatus() {
         //given
         Long id = 1L;
 
@@ -216,8 +215,8 @@ public class StorageServiceImplTest {
         }
     }
 
-    @Test(expected = UnprocessableEntityException.class)
-    public void findByIdShouldThrowUnprocessableEntityExceptionWhenUploadedFileHasFailedStatus() {
+    @Test(expected = StorageException.class)
+    public void findByIdShouldThrowStorageExceptionWhenUploadedFileHasFailedStatus() {
         //given
         Long id = 1L;
 
