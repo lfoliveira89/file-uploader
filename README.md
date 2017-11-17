@@ -1,6 +1,6 @@
 # Spring Boot - jQuery File Upload
 
-This is a Spring Boot web application configured with H2 in-memory database that supports chunked file uploads.<br />
+This is a Spring Boot web application configured with H2 persistent database that supports chunked file uploads.<br />
 Graphic interface was built using jQuery.
 
 ## Getting Started
@@ -87,6 +87,13 @@ Sample:
 This project uses Spring actuator in order to implement health check which can be accessed at [http://localhost:8080/health](http://localhost:8080/health).
 
 ## Tips
+By default, the API is configured to upload files with a maximum of 300 MB and, if is a chunked transfer, with a maximum of 1MB per chunk.
+This can be changed in the application.properties file:
+```
+upload.max.file.size.bytes=300000000
+upload.max.chunk.size.bytes=1000000
+```
+
 Depending on the size of the uploaded file it may be required to increase the JVM heap size. For instance:
 ```
 mvn spring-boot:run -Drun.jvmArguments="-Xmx6144m"
