@@ -26,7 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
@@ -103,7 +102,7 @@ public class FileUploadController {
 
         DownloadableFileResource downloadableFileResource = storageService.findById(valueOf(id));
         response.setHeader("Content-Disposition", "attachment; filename=" + downloadableFileResource.getFilename());
-        IOUtils.copy(downloadableFileResource.getInputStream(), new BufferedOutputStream(response.getOutputStream()));
+        IOUtils.copy(downloadableFileResource.getInputStream(), response.getOutputStream());
     }
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_UTF8_VALUE)

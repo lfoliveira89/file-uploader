@@ -5,6 +5,7 @@ import fileuploader.controller.resources.UploadedFileResource;
 import fileuploader.domain.UploadedFile;
 import fileuploader.exceptions.ResourceNotFoundException;
 import fileuploader.exceptions.StorageException;
+import fileuploader.exceptions.UnprocessableEntityException;
 import fileuploader.projection.UploadedFileInfo;
 import fileuploader.repositories.UploadedFileRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,7 @@ public class StorageServiceImpl implements StorageService {
     private static final String COULD_NOT_DELETE_TMP_FILE_ERROR = "Could not delete temporary file at %s. Exception: %s";
     private static final String COULD_NOT_PROCESS_FILE_ERROR = "Could not process given file: userId %s, filename %s. Exception: %s";
     private static final String ERROR_UPLOADED_FILE_NOT_FOUND_MSG = "Resource not found for id: %s";
+    private static final String CANNOT_DOWNLOAD_INCOMPLETE_FILE_MSG = "Cannot download an incomplete resource. Resource %s has status %s";
 
     @Value("${upload.tmp.directory}")
     private String tmpDirectory;
@@ -83,11 +85,8 @@ public class StorageServiceImpl implements StorageService {
     @Override
     public DownloadableFileResource findById(Long id) {
         UploadedFile uploadedFile = repository.findOne(id);
-        if (uploadedFile == null) {
-            String err = format(ERROR_UPLOADED_FILE_NOT_FOUND_MSG, id);
-            log.error("[StorageServiceImpl.findById] " + err);
-            throw new ResourceNotFoundException(err);
-        }
+        checkResourceNotFound(id, uploadedFile);
+        checkUnprocessableEntity(id, uploadedFile);
 
         return DownloadableFileResource.builder()
                 .filename(extractOriginalFilename(uploadedFile.getFilename()))
@@ -95,9 +94,26 @@ public class StorageServiceImpl implements StorageService {
                 .build();
     }
 
+    private void checkResourceNotFound(Long id, UploadedFile uploadedFile) {
+        if (uploadedFile == null) {
+            String err = format(ERROR_UPLOADED_FILE_NOT_FOUND_MSG, id);
+            log.error("[StorageServiceImpl.findById] " + err);
+            throw new ResourceNotFoundException(err);
+        }
+    }
+
+    private void checkUnprocessableEntity(Long id, UploadedFile uploadedFile) {
+        if (!COMPLETED.equals(uploadedFile.getStatus())) {
+            String err = format(CANNOT_DOWNLOAD_INCOMPLETE_FILE_MSG, id, uploadedFile.getStatus());
+            log.error("[StorageServiceImpl.findById] " + err);
+            throw new UnprocessableEntityException(err);
+        }
+    }
+
     @Transactional
     @Override
-    public void store(String userId, MultipartFile file, Integer totalChunks, boolean lastChunk, Instant uploadedTime) {
+    public void store(String userId, MultipartFile file, Integer totalChunks, boolean lastChunk, Instant
+            uploadedTime) {
         String filename = StringUtils.cleanPath(file.getOriginalFilename());
 
         Path tempFile = getTempFile(userId, filename);

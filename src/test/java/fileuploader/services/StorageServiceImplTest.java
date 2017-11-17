@@ -5,6 +5,7 @@ import fileuploader.controller.resources.UploadedFileResource;
 import fileuploader.domain.UploadedFile;
 import fileuploader.exceptions.ResourceNotFoundException;
 import fileuploader.exceptions.StorageException;
+import fileuploader.exceptions.UnprocessableEntityException;
 import fileuploader.projection.UploadedFileInfo;
 import fileuploader.repositories.UploadedFileRepository;
 import org.junit.After;
@@ -157,6 +158,7 @@ public class StorageServiceImplTest {
                 .id(1L)
                 .filename("test.pdf")
                 .content("test data".getBytes())
+                .status(COMPLETED)
                 .build();
 
         when(repository.findOne(id)).thenReturn(uploadedFile);
@@ -179,6 +181,54 @@ public class StorageServiceImplTest {
         Long id = 1L;
 
         when(repository.findOne(id)).thenReturn(null);
+
+        //when
+        try {
+            service.findById(id);
+        } finally {
+            //then
+            verify(repository).findOne(id);
+            verifyNoMoreInteractions(repository);
+        }
+    }
+
+    @Test(expected = UnprocessableEntityException.class)
+    public void findByIdShouldThrowUnprocessableEntityExceptionWhenUploadedFileHasPendingStatus() {
+        //given
+        Long id = 1L;
+
+        UploadedFile uploadedFile = UploadedFile.builder()
+                .id(1L)
+                .filename("test.pdf")
+                .content("test data".getBytes())
+                .status(PENDING)
+                .build();
+
+        when(repository.findOne(id)).thenReturn(uploadedFile);
+
+        //when
+        try {
+            service.findById(id);
+        } finally {
+            //then
+            verify(repository).findOne(id);
+            verifyNoMoreInteractions(repository);
+        }
+    }
+
+    @Test(expected = UnprocessableEntityException.class)
+    public void findByIdShouldThrowUnprocessableEntityExceptionWhenUploadedFileHasFailedStatus() {
+        //given
+        Long id = 1L;
+
+        UploadedFile uploadedFile = UploadedFile.builder()
+                .id(1L)
+                .filename("test.pdf")
+                .content("test data".getBytes())
+                .status(FAILED)
+                .build();
+
+        when(repository.findOne(id)).thenReturn(uploadedFile);
 
         //when
         try {
