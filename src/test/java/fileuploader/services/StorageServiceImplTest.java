@@ -305,10 +305,10 @@ public class StorageServiceImplTest {
         String userId = "userId";
         String filename = "test.pdf";
         Instant uploadedTime = Instant.now();
-        Integer totalChunks = 10;
+        Integer totalChunks = 1;
         MockMultipartFile multipartFile = dummyMultipartFile(filename);
 
-        when(repository.existsByUserIdAndFilename(userId, filename)).thenReturn(false);
+        when(repository.existsByUserIdAndFilename(userId, filename)).thenReturn(false).thenReturn(false);
         doThrow(IOException.class).doReturn(null).when(repository).save(any(UploadedFile.class));
 
         //when
@@ -316,7 +316,7 @@ public class StorageServiceImplTest {
             service.store(userId, multipartFile, totalChunks, true, uploadedTime);
         } finally {
             //then
-            verify(repository).existsByUserIdAndFilename(userId, filename);
+            verify(repository, times(2)).existsByUserIdAndFilename(userId, filename);
             verify(repository, times(2)).save(any(UploadedFile.class));
             verifyNoMoreInteractions(repository);
         }
@@ -331,7 +331,7 @@ public class StorageServiceImplTest {
         Integer totalChunks = 10;
         MockMultipartFile multipartFile = dummyMultipartFile(filename);
 
-        when(repository.existsByUserIdAndFilename(userId, filename)).thenReturn(true);
+        when(repository.existsByUserIdAndFilename(userId, filename)).thenReturn(true).thenReturn(true);
         doAnswer(invocationOnMock -> {
             throw new IOException("error");
         }).when(repository)
@@ -342,7 +342,7 @@ public class StorageServiceImplTest {
             service.store(userId, multipartFile, totalChunks, true, uploadedTime);
         } finally {
             //then
-            verify(repository).existsByUserIdAndFilename(userId, filename);
+            verify(repository, times(2)).existsByUserIdAndFilename(userId, filename);
             verify(repository).updateByUserIdAndFilename(userId, filename, uploadedTime, COMPLETED, totalChunks, multipartFile.getBytes());
             verify(repository).updateByUserIdAndFilename(userId, filename, uploadedTime, FAILED, totalChunks, "Could not process given file: userId userId, filename test.pdf. Exception: error");
             verifyNoMoreInteractions(repository);

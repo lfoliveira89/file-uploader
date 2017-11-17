@@ -110,18 +110,17 @@ public class StorageServiceImpl implements StorageService {
         }
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = StorageException.class)
     @Override
     public void store(String userId, MultipartFile file, Integer totalChunks, boolean lastChunk, Instant
             uploadedTime) {
         String filename = StringUtils.cleanPath(file.getOriginalFilename());
 
         Path tempFile = getTempFile(userId, filename);
-
-        boolean exists = repository.existsByUserIdAndFilename(userId, filename);
         try {
-            Files.write(tempFile, file.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            boolean exists = repository.existsByUserIdAndFilename(userId, filename);
 
+            Files.write(tempFile, file.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             if (lastChunk) {
                 saveOrUpdateCompletedUploadedFile(exists, userId, totalChunks, uploadedTime, filename, tempFile);
                 deleteTmpFileIfExists(tempFile);
@@ -132,7 +131,7 @@ public class StorageServiceImpl implements StorageService {
             String err = format(COULD_NOT_PROCESS_FILE_ERROR, userId, filename, e.getMessage());
             log.error("[StorageServiceImpl.store] " + err);
 
-            saveOrUpdateFailedUploadedFile(exists, userId, totalChunks, uploadedTime, filename, err);
+            saveOrUpdateFailedUploadedFile(userId, totalChunks, uploadedTime, filename, err);
             deleteTmpFileIfExists(tempFile);
 
             throw new StorageException(err);
@@ -190,8 +189,9 @@ public class StorageServiceImpl implements StorageService {
         }
     }
 
-    private void saveOrUpdateFailedUploadedFile(boolean exists, String userId, Integer totalChunks, Instant uploadedTime,
+    private void saveOrUpdateFailedUploadedFile(String userId, Integer totalChunks, Instant uploadedTime,
                                                 String filename, String rootCause) {
+        boolean exists = repository.existsByUserIdAndFilename(userId, filename);
         if (!exists) {
             UploadedFile uploadedFile = UploadedFile.builder()
                     .userId(userId)
