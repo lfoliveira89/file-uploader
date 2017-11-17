@@ -9,6 +9,7 @@ Graphic interface was built using jQuery.
 * Git
 * JDK 8 or later
 * Maven 3.0 or later
+* Lombok 1.16 or later
 
 ### Clone
 To get started you can simply clone this repository using git:
