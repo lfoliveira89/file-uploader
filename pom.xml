@@ -23,6 +23,9 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>1.8</java.version>
 
+        <docker.image.prefix>lfoliveira89</docker.image.prefix>
+        <docker.image.name>file-uploader</docker.image.name>
+
         <swagger.version>2.7.0</swagger.version>
         <h2.version>1.4.196</h2.version>
         <apache.commons.version>2.6</apache.commons.version>
@@ -85,16 +88,50 @@
     </dependencies>
 
     <build>
+        <finalName>${project.artifactId}</finalName>
         <resources>
             <resource>
               <directory>src/main/resources</directory>
                 <filtering>true</filtering>
             </resource>
+            <resource>
+                <directory>src/main/docker</directory>
+            </resource>
+            <resource>
+                <directory>src/main/webapp</directory>
+            </resource>
         </resources>
+
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.20.0</version>
+
+                <configuration>
+                    <dockerHost>unix:///var/run/docker.sock</dockerHost>
+                    <verbose>true</verbose>
+                    <images>
+                        <image>
+                            <name>${docker.image.prefix}/${docker.image.name}</name>
+                            <build>
+                                <dockerFile>Dockerfile</dockerFile>
+                                <assembly>
+                                    <descriptorRef>artifact</descriptorRef>
+                                </assembly>
+                                <tags>
+                                    <tag>latest</tag>
+                                    <tag>${project.version}</tag>
+                                </tags>
+                            </build>
+                        </image>
+                    </images>
+                </configuration>
             </plugin>
         </plugins>
     </build>
