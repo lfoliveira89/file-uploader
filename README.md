@@ -27,6 +27,10 @@ You can run the application from the command line using:
 ```
 mvn spring-boot:run
 ```
+or
+```
+docker run --name fileuploader -d -p 8080:8080 lfoliveira89/file-uploader
+```
 Now open a browser and visit [http://localhost:8080/index.html](http://localhost:8080/index.html).
 
 ## API
